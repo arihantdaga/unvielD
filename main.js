@@ -189,7 +189,42 @@ function cleanFolder(){
     
 }
 
+function parseUri(url) {
+        let parsedUrl = {};
+        let parts = url.split('?');
+        parsedUrl["host"]=parts[0];
+        let queryString = parts[1];
+        parsedUrl["queries"] = {};
+        queryString = queryString.split("&");
+        for (var i = 0; i < queryString.length; i++) {
+            let pair = queryString[i].split('=');
+            if(!pair) continue;
+            parsedUrl["queries"][pair[0]] = pair[1] || "";
+        }
+        // console.log('Query variable %s not found', variable);
+        console.log(parsedUrl);
+        return parsedUrl;
+}
+function getResizedPhotoUrl(photo_url,width,height){
+    let parsedUrl=parseUri(photo_url);
+    if(width){
+        parsedUrl["queries"]["w"] = `${width}`;
+    }
+    if(height){
+        parsedUrl["queries"]["h"] = `${height}`;
+    }
+    parsedUrl["queries"]["crop"] = "entropy";
+    parsedUrl["queries"]["fit"] = "crop";
+    let queryString = "?";
+    for(let item in parsedUrl["queries"]){
+        queryString+=`${item}=${parsedUrl["queries"][item]}&`;
+    }
+    return parsedUrl["host"]+queryString;
+}
+
+
 function createUrl(options){
+    /*
     let isRandrom=false;
     // --grayscale
     const grayscale = options.grayscale ? 'g/' : '';
@@ -206,11 +241,7 @@ function createUrl(options){
         params.push(`gravity=${options.gravity}`);
     }
 
-    // random
-    if (options.random) {
-        params.push('random');
-        isRandrom = true;
-    }
+    
 
     // --blur
     if (options.blur) {
@@ -222,6 +253,12 @@ function createUrl(options){
     }
     if(options.height){
         params.push(`height=${options.height}`);
+    }
+    */
+    // random
+    let isRandrom = false;
+    if (options.random) {
+        isRandrom = true;
     }
     let url = `${BASE_URL}/photos`;
     if(isRandrom){
@@ -236,14 +273,16 @@ function createUrl(options){
     let promise = new Promise((resolve,reject)=>{
             rp(requestOption).then(data=>{
                 if(data && data.urls){
-                    let imageUrl = data.urls.raw ? data.urls.raw:data.urls.regular;
-                    params.push(`url=${encodeURI(imageUrl)}`);
-                    const param = params.length ? `${params.join('&')}` : '';
+                    let photo_download_url = data.urls.regular;
+                    
+                    let imageUrl = getResizedPhotoUrl(photo_download_url, options.width,options.height);
+                    // params.push(`url=${encodeURI(imageUrl)}`);
+                    // const param = params.length ? `${params.join('&')}` : '';
                     // let cloudinaryUrl = `http://res.cloudinary.com/daga/image/fetch/${image_params}/${imageUrl}`;
-                    let url = `${BASE_URL}/photos/download?${param}`;
+                    // let url = `${BASE_URL}/photos/download?${param}`;
 
-                    console.log(url);
-                    return resolve(url);
+                    console.log(imageUrl);
+                    return resolve(imageUrl);
                 }else{
                     return reject("Image Fetch failed from API");
                 }
